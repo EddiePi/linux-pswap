@@ -2448,3 +2448,17 @@ COMPAT_SYSCALL_DEFINE1(sysinfo, struct compat_sysinfo __user *, info)
 	return 0;
 }
 #endif /* CONFIG_COMPAT */
+
+SYSCALL_DEFINE2(priority_swap, pid_t, pid, bool __user, enabled)
+{
+	struct pid * kpid;
+	struct task_struct * task;
+	kpid = find_get_pid(pid);  // get the pid
+	task = pid_task(kpid, PIDTYPE_PID);  // return the task_struct
+	if (likely(task->mm)) {
+		printk("process %d has a mm struct. enable priority swap: %b\n", pid, enabled)
+		return 0;
+	}
+	printk("process %d does not have a mm struct\n", pid)
+	return -EFAULT;
+}
