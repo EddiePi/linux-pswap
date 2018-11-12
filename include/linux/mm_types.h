@@ -423,6 +423,10 @@ struct mm_struct {
 	unsigned long hiwater_rss;	/* High-watermark of RSS usage */
 	unsigned long hiwater_vm;	/* High-water virtual memory usage */
 
+	// Edit by Eddie
+	// this field indicate whether the pages belonging to this mm should use priority swap.
+	bool priority_swap_enabled;
+
 	unsigned long total_vm;		/* Total pages mapped */
 	unsigned long locked_vm;	/* Pages that have PG_mlocked set */
 	unsigned long pinned_vm;	/* Refcount permanently increased */
