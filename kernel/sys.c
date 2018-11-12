@@ -2456,9 +2456,9 @@ SYSCALL_DEFINE2(priority_swap, pid_t, pid, bool __user, enabled)
 	kpid = find_get_pid(pid);  // get the pid
 	task = pid_task(kpid, PIDTYPE_PID);  // return the task_struct
 	if (likely(task->mm)) {
-		printk("process %d has a mm struct. enable priority swap: %b\n", pid, enabled)
+		printk("process %d has a mm struct. enable priority swap: %d\n", pid, enabled);
 		return 0;
 	}
-	printk("process %d does not have a mm struct\n", pid)
+	printk("process %d does not have a mm struct\n", pid);
 	return -EFAULT;
 }
