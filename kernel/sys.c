@@ -55,6 +55,8 @@
 
 #include <linux/nospec.h>
 
+#include <linux/mm_types.h>
+
 #include <linux/kmsg_dump.h>
 /* Move somewhere else to avoid recompiling? */
 #include <generated/utsrelease.h>
@@ -2453,9 +2455,10 @@ SYSCALL_DEFINE2(priority_swap, pid_t, pid, bool __user, enabled)
 {
 	struct pid * kpid;
 	struct task_struct *task;
+	struct mm_struct *mm;
 	kpid = find_get_pid(pid);  // get the pid
 	task = pid_task(kpid, PIDTYPE_PID);  // return the task_struct
-	mm_struct *mm = task->mm;
+	mm = task->mm;
 	if (likely(mm)) {
 		mm->priority_swap_enabled = enabled;
 		printk("process %d has a mm struct. enable priority swap: %d\n", pid, mm->priority_swap_enabled);

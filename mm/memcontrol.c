@@ -3612,12 +3612,12 @@ static int mem_cgroup_oom_control_write(struct cgroup_subsys_state *css,
 
 
 // Edit by Eddie
-static int mem_cgroup_priority_swapping_read(struct cgroup_subsys_state *css, void *v)
+static u64 mem_cgroup_priority_swapping_read(struct cgroup_subsys_state *css,
+					struct cftype *cft)
 {
 	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
 
-	seq_printf(sf, "priority_swapping_enabled %d\n", memcg->priority_swapping_enabled);
-	return 0;
+	return memcg->priority_swapping_enabled;
 }
 
 static int mem_cgroup_priority_swapping_write(struct cgroup_subsys_state *css,
