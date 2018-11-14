@@ -221,6 +221,10 @@ struct mem_cgroup {
 	/* OOM-Killer disable */
 	int		oom_kill_disable;
 
+	// Edit by Eddie
+	// whether this cgroup has priority swapping enabled
+	int 	priority_swapping_enabled;
+
 	/* handle for "memory.events" */
 	struct cgroup_file events_file;
 
