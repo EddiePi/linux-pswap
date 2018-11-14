@@ -3610,6 +3610,30 @@ static int mem_cgroup_oom_control_write(struct cgroup_subsys_state *css,
 	return 0;
 }
 
+
+// Edit by Eddie
+static int mem_cgroup_priority_swapping_read(struct cgroup_subsys_state *css, void *v)
+{
+	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
+
+	seq_printf(sf, "priority_swapping_enabled %d\n", memcg->priority_swapping_enabled);
+	return 0;
+}
+
+static int mem_cgroup_priority_swapping_write(struct cgroup_subsys_state *css,
+	struct cftype *cft, u64 val)
+{
+	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
+
+	/* cannot set to root cgroup and only 0 and 1 are allowed */
+	if (!css->parent || !((val == 0) || (val == 1)))
+		return -EINVAL;
+
+	memcg->priority_swapping_enabled = val;
+
+	return 0;
+}
+
 #ifdef CONFIG_MEMCG_KMEM
 static int memcg_init_kmem(struct mem_cgroup *memcg, struct cgroup_subsys *ss)
 {
@@ -4076,6 +4100,13 @@ static struct cftype mem_cgroup_legacy_files[] = {
 	{
 		.name = "pressure_level",
 	},
+	// Edit by Eddie
+	// This field indicate whether this memory subsystem has a priority swapping enabled
+	{
+		.name = "priority_swapping_enabled",
+		.read_u64 = mem_cgroup_priority_swapping_read,
+		.write_u64 = mem_cgroup_priority_swapping_write,
+	}
 #ifdef CONFIG_NUMA
 	{
 		.name = "numa_stat",
@@ -4356,6 +4387,9 @@ mem_cgroup_css_online(struct cgroup_subsys_state *css)
 	memcg->use_hierarchy = parent->use_hierarchy;
 	memcg->oom_kill_disable = parent->oom_kill_disable;
 	memcg->swappiness = mem_cgroup_swappiness(parent);
+	// Edit by Eddie
+	// the default pswap value is 0
+	memcg->priority_swapping_enabled = 0;
 
 	if (parent->use_hierarchy) {
 		page_counter_init(&memcg->memory, &parent->memory);
