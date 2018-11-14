@@ -4106,7 +4106,7 @@ static struct cftype mem_cgroup_legacy_files[] = {
 		.name = "priority_swapping_enabled",
 		.read_u64 = mem_cgroup_priority_swapping_read,
 		.write_u64 = mem_cgroup_priority_swapping_write,
-	}
+	},
 #ifdef CONFIG_NUMA
 	{
 		.name = "numa_stat",
