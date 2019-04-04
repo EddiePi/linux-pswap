@@ -710,7 +710,7 @@ static int apply_mlockall_flags(int flags)
 
 		newflags = vma->vm_flags & VM_LOCKED_CLEAR_MASK;
 		newflags |= to_add;
-
+		
 		/* Ignore errors */
 		mlock_fixup(vma, &prev, vma->vm_start, vma->vm_end, newflags);
 		cond_resched_rcu_qs();
@@ -756,6 +756,122 @@ SYSCALL_DEFINE0(munlockall)
 	down_write(&current->mm->mmap_sem);
 	ret = apply_mlockall_flags(0);
 	up_write(&current->mm->mmap_sem);
+	return ret;
+}
+
+// Edit by Eddie
+
+int can_do_mlock_task(task_struct *task)
+{
+	if (task_rlimit(task, RLIMIT_MEMLOCK) != 0)
+		return 1;
+	/* TODO: the test the capability of the current process. It should
+	 * test other process, too.
+	 */
+	if (capable(CAP_IPC_LOCK))
+		return 1;
+	return 0;
+}
+EXPORT_SYMBOL(can_do_mlock_task);
+
+/*
+ * Take the MCL_* flags passed into mlockall (or 0 if called from munlockall)
+ * and translate into the appropriate modifications to mm->def_flags and/or the
+ * flags for all current VMAs.
+ *
+ * There are a couple of subtleties with this.  If mlockall() is called multiple
+ * times with different flags, the values do not necessarily stack.  If mlockall
+ * is called once including the MCL_FUTURE flag and then a second time without
+ * it, VM_LOCKED and VM_LOCKONFAULT will be cleared from mm->def_flags.
+ */
+static int apply_mlockall_flags_task(int flags, task_struct *task)
+{
+	struct vm_area_struct * vma, * prev = NULL;
+	vm_flags_t to_add = 0;
+
+	task->mm->def_flags &= VM_LOCKED_CLEAR_MASK;
+	if (flags & MCL_FUTURE) {
+		task->mm->def_flags |= VM_LOCKED;
+
+		if (flags & MCL_ONFAULT)
+			task->mm->def_flags |= VM_LOCKONFAULT;
+
+		if (!(flags & MCL_CURRENT))
+			goto out;
+	}
+
+	if (flags & MCL_CURRENT) {
+		to_add |= VM_LOCKED;
+		if (flags & MCL_ONFAULT)
+			to_add |= VM_LOCKONFAULT;
+	}
+
+	for (vma = task->mm->mmap; vma ; vma = prev->vm_next) {
+		vm_flags_t newflags;
+
+		newflags = vma->vm_flags & VM_LOCKED_CLEAR_MASK;
+		newflags |= to_add;
+
+		/* Ignore errors */
+		mlock_fixup(vma, &prev, vma->vm_start, vma->vm_end, newflags);
+		if (!cond_resched())
+		{
+			rcu_note_voluntary_context_switch(task);
+		}
+		//cond_resched_rcu_qs();
+	}
+out:
+	return 0;
+}
+
+SYSCALL_DEFINE2(pmlockall, int, flags, pid_t, pid)
+{
+	unsigned long lock_limit;
+	int ret;
+
+	if (!flags || (flags & ~(MCL_CURRENT | MCL_FUTURE | MCL_ONFAULT)))
+		return -EINVAL;
+
+	if (!can_do_mlock_task())
+		return -EPERM;
+
+	if (flags & MCL_CURRENT)
+		lru_add_drain_all();	/* flush pagevec */
+
+	lock_limit = task_rlimit(task, RLIMIT_MEMLOCK);
+	lock_limit >>= PAGE_SHIFT;
+
+	ret = -ENOMEM;
+	struct pid * kpid;
+	struct task_struct *task;
+	kpid = find_get_pid(pid);  // get the pid
+	task = pid_task(kpid, PIDTYPE_PID);  // return the task_struct
+
+	down_write(&task->mm->mmap_sem);
+
+	if (!(flags & MCL_CURRENT) || (task->mm->total_vm <= lock_limit) ||
+	    capable(CAP_IPC_LOCK))
+		ret = apply_mlockall_flags_task(flags, task);
+	up_write(&task->mm->mmap_sem);
+	if (!ret && (flags & MCL_CURRENT))
+		// this new function is defined in 'include/linux/mm.h'
+		// 'mm_populate_task' calls '__mm_populate_task' defined in 'mm/gup.c'
+		mm_populate_task(0, TASK_SIZE, task_struct *task);
+
+	return ret;
+}
+
+SYSCALL_DEFINE1(munlockall, pid_t, pid)
+{
+	int ret;
+	struct pid * kpid;
+	struct task_struct *task;
+	kpid = find_get_pid(pid);  // get the pid
+	task = pid_task(kpid, PIDTYPE_PID);  // return the task_struct
+
+	down_write(&task->mm->mmap_sem);
+	ret = apply_mlockall_flags_task(0, task);
+	up_write(&task->mm->mmap_sem);
 	return ret;
 }
 

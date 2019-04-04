@@ -1911,8 +1911,18 @@ static inline void mm_populate(unsigned long addr, unsigned long len)
 	/* Ignore errors */
 	(void) __mm_populate(addr, len, 1);
 }
+// Edit by Eddie
+extern int __mm_populate_task(unsigned long addr, unsigned long len,
+			 int ignore_errors, task_struct *task);
+static inline void mm_populate_task(unsigned long addr, unsigned long len, task_struct *task)
+{
+	/* Ignore errors */
+	(void) __mm_populate_task(addr, len, 1, task);
+}
 #else
 static inline void mm_populate(unsigned long addr, unsigned long len) {}
+static inline void mm_populate_task(unsigned long addr, unsigned long len, task_struct * task) {}
+
 #endif
 
 /* These take the mm semaphore themselves */
