@@ -891,8 +891,8 @@ asmlinkage long sys_mlock2(unsigned long start, size_t len, int flags);
 
 asmlinkage long sys_priority_swap(pid_t pid, bool __user enabled);
 
-asmlinkage long pmlockall(int flags, pid_t pid);
+asmlinkage long sys_pmlockall(int flags, pid_t pid);
 
-asmlinkage long pmunlockall(pid_t pid);
+asmlinkage long sys_pmunlockall(pid_t pid);
 
 #endif

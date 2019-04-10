@@ -1074,6 +1074,7 @@ static inline bool shmem_mapping(struct address_space *mapping)
 #endif
 
 extern int can_do_mlock(void);
+extern int can_do_mlock_task(struct task_struct *);
 extern int user_shm_lock(size_t, struct user_struct *);
 extern void user_shm_unlock(size_t, struct user_struct *);
 
@@ -1913,8 +1914,8 @@ static inline void mm_populate(unsigned long addr, unsigned long len)
 }
 // Edit by Eddie
 extern int __mm_populate_task(unsigned long addr, unsigned long len,
-			 int ignore_errors, task_struct *task);
-static inline void mm_populate_task(unsigned long addr, unsigned long len, task_struct *task)
+			 int ignore_errors, struct task_struct *task);
+static inline void mm_populate_task(unsigned long addr, unsigned long len, struct task_struct *task)
 {
 	/* Ignore errors */
 	(void) __mm_populate_task(addr, len, 1, task);

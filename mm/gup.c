@@ -996,7 +996,7 @@ int __mm_populate(unsigned long start, unsigned long len, int ignore_errors)
  * flags. VMAs must be already marked with the desired vm_flags, and
  * mmap_sem must not be held.
  */
-int __mm_populate(unsigned long start, unsigned long len, int ignore_errors, task_struct *task)
+int __mm_populate_task(unsigned long start, unsigned long len, int ignore_errors, struct task_struct *task)
 {
 	struct mm_struct *mm = task->mm;
 	unsigned long end, nstart, nend;

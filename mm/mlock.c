@@ -34,6 +34,21 @@ int can_do_mlock(void)
 }
 EXPORT_SYMBOL(can_do_mlock);
 
+// Edit by Eddie
+// defined in 'include/linux/mm.h'
+int can_do_mlock_task(struct task_struct *task)
+{
+        if (task_rlimit(task, RLIMIT_MEMLOCK) != 0)
+                return 1;
+        /* TODO: the test the capability of the current process. It should
+         * test other process, too.
+         */
+        if (capable(CAP_IPC_LOCK))
+                return 1;
+        return 0;
+}
+EXPORT_SYMBOL(can_do_mlock_task);
+
 /*
  * Mlocked pages are marked with PageMlocked() flag for efficient testing
  * in vmscan and, possibly, the fault path; and to support semi-accurate
@@ -761,18 +776,6 @@ SYSCALL_DEFINE0(munlockall)
 
 // Edit by Eddie
 
-int can_do_mlock_task(task_struct *task)
-{
-	if (task_rlimit(task, RLIMIT_MEMLOCK) != 0)
-		return 1;
-	/* TODO: the test the capability of the current process. It should
-	 * test other process, too.
-	 */
-	if (capable(CAP_IPC_LOCK))
-		return 1;
-	return 0;
-}
-EXPORT_SYMBOL(can_do_mlock_task);
 
 /*
  * Take the MCL_* flags passed into mlockall (or 0 if called from munlockall)
@@ -784,7 +787,7 @@ EXPORT_SYMBOL(can_do_mlock_task);
  * is called once including the MCL_FUTURE flag and then a second time without
  * it, VM_LOCKED and VM_LOCKONFAULT will be cleared from mm->def_flags.
  */
-static int apply_mlockall_flags_task(int flags, task_struct *task)
+static int apply_mlockall_flags_task(int flags, struct task_struct *task)
 {
 	struct vm_area_struct * vma, * prev = NULL;
 	vm_flags_t to_add = 0;
@@ -828,11 +831,16 @@ SYSCALL_DEFINE2(pmlockall, int, flags, pid_t, pid)
 {
 	unsigned long lock_limit;
 	int ret;
+	struct pid * kpid;
+        struct task_struct *task;
 
 	if (!flags || (flags & ~(MCL_CURRENT | MCL_FUTURE | MCL_ONFAULT)))
 		return -EINVAL;
 
-	if (!can_do_mlock_task())
+        kpid = find_get_pid(pid);  // get the pid
+        task = pid_task(kpid, PIDTYPE_PID);  // return the task_struct
+
+	if (!can_do_mlock_task(task))
 		return -EPERM;
 
 	if (flags & MCL_CURRENT)
@@ -842,10 +850,6 @@ SYSCALL_DEFINE2(pmlockall, int, flags, pid_t, pid)
 	lock_limit >>= PAGE_SHIFT;
 
 	ret = -ENOMEM;
-	struct pid * kpid;
-	struct task_struct *task;
-	kpid = find_get_pid(pid);  // get the pid
-	task = pid_task(kpid, PIDTYPE_PID);  // return the task_struct
 
 	down_write(&task->mm->mmap_sem);
 
@@ -856,12 +860,12 @@ SYSCALL_DEFINE2(pmlockall, int, flags, pid_t, pid)
 	if (!ret && (flags & MCL_CURRENT))
 		// this new function is defined in 'include/linux/mm.h'
 		// 'mm_populate_task' calls '__mm_populate_task' defined in 'mm/gup.c'
-		mm_populate_task(0, TASK_SIZE, task_struct *task);
+		mm_populate_task(0, TASK_SIZE, task);
 
 	return ret;
 }
 
-SYSCALL_DEFINE1(munlockall, pid_t, pid)
+SYSCALL_DEFINE1(pmunlockall, pid_t, pid)
 {
 	int ret;
 	struct pid * kpid;
