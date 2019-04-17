@@ -3230,6 +3230,7 @@ nopage:
 got_pg:
 	return page;
 }
+EXPORT_SYMBOL(__alloc_pages_slowpath);
 
 /*
  * This is the 'heart' of the zoned buddy allocator.
