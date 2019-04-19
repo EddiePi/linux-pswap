@@ -68,6 +68,10 @@
 #include <asm/div64.h>
 #include "internal.h"
 
+// Edit by Eddie
+#define CREATE_TRACE_POINTS
+#include <trace/events/page_alloc.h>
+
 /* prevent >1 _updater_ of zone percpu pageset ->high and ->batch fields */
 static DEFINE_MUTEX(pcp_batch_high_lock);
 #define MIN_PERCPU_PAGELIST_FRACTION	(8)
@@ -3249,6 +3253,9 @@ __alloc_pages_nodemask(gfp_t gfp_mask, unsigned int order,
 		.nodemask = nodemask,
 		.migratetype = gfpflags_to_migratetype(gfp_mask),
 	};
+	// Edit by Eddie
+	int slowpath_count;
+	slowpath_count = 0;
 
 	gfp_mask &= gfp_allowed_mask;
 
@@ -3299,7 +3306,10 @@ retry_cpuset:
 		alloc_mask = memalloc_noio_flags(gfp_mask);
 		ac.spread_dirty_pages = false;
 
+		slowpath_count += 1;
 		page = __alloc_pages_slowpath(alloc_mask, order, &ac);
+
+		
 	}
 
 	if (kmemcheck_enabled && page)
@@ -3316,7 +3326,15 @@ out:
 	 */
 	if (unlikely(!page && read_mems_allowed_retry(cpuset_mems_cookie)))
 		goto retry_cpuset;
-
+	
+	// Edit by Eddie
+	/*
+	 * we only trace the slowpath when it actually happens
+	 * this reduce the tracing overhead
+	 */
+	if (slowpath_count > 0)
+		trace_alloc_pages_nodemask(slowpath_count);
+	
 	return page;
 }
 EXPORT_SYMBOL(__alloc_pages_nodemask);
